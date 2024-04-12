@@ -30,4 +30,4 @@ filter --file-log=log.txt --file-output=out.txt --address-start=1.0.0.0 \n --add
 ```exit```
 ## Запуск:
 - [x] ```dotnet run``` в директории проекта <br>
-- [ ] Запустить файл .exe 
+- [x] Запустить файл Test.exe (Скачать можно в разделе Releases)
