@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Net;
+using System.Text.Json;
 
+using LogFilter.Exceptions;
 using LogFilter.Models;
 
 namespace LogFilter.Helpers;
@@ -25,7 +27,7 @@ public class FilterParametersBuilder
     {
         if (!IPAddress.TryParse(addressStart, out var address))
         {
-            throw new ArgumentException("Cant parse address start");
+            throw new ParseException(addressStart);
         }
 
         _filterParameters.AddressStart = address;
@@ -34,9 +36,9 @@ public class FilterParametersBuilder
 
     public FilterParametersBuilder SetAddressMask(string addressMask)
     {
-        if (!int.TryParse(addressMask, out var mask))
+        if (!int.TryParse(addressMask, out var mask) || mask < 0)
         {
-            throw new ArgumentException("Cant parse address mask");
+            throw new ParseException(addressMask);
         }
 
         _filterParameters.AddressMask = mask;
@@ -47,7 +49,7 @@ public class FilterParametersBuilder
     {
         if (!DateOnly.TryParse(timeStart, CultureInfo.InvariantCulture, out var start))
         {
-            throw new ArgumentException("Cant parse time start");
+            throw new ParseException(timeStart);
         }
         _filterParameters.TimeStart = start;
         return this;
@@ -57,7 +59,7 @@ public class FilterParametersBuilder
     {
         if (!DateOnly.TryParse(timeEnd, CultureInfo.InvariantCulture, out var end))
         {
-            throw new ArgumentException("Cant parse time end");
+            throw new ParseException(timeEnd);
         }
 
         _filterParameters.TimeEnd = end;
@@ -66,9 +68,57 @@ public class FilterParametersBuilder
 
     public FilterParameters Build()
     {
-        if (_filterParameters.IsValid())
-            return _filterParameters;
+        if (string.IsNullOrWhiteSpace(_filterParameters.LogFilePath))
+            throw new IsRequiredException(nameof(_filterParameters.LogFilePath));
+        if (string.IsNullOrWhiteSpace(_filterParameters.OutputFilePath))
+            throw new IsRequiredException(nameof(_filterParameters.OutputFilePath));
+        if (_filterParameters.TimeStart is null)
+            throw new IsRequiredException(nameof(_filterParameters.TimeStart));
+        if (_filterParameters.TimeEnd is null)
+            throw new IsRequiredException(nameof(_filterParameters.TimeEnd));
+        if (_filterParameters.AddressMask is not null &&
+            _filterParameters.AddressStart is null)
+            throw new IsRequiredException(nameof(_filterParameters.AddressStart));
 
-        throw new ArgumentException("Cant build filter parameters.");
+        return _filterParameters;
+    }
+
+    public static FilterParametersBuilder CreateFromFile(string path)
+    {
+        if (!File.Exists(path)) return new();
+
+        var json = File.ReadAllText(path);
+        var config = JsonSerializer.Deserialize<FilterParametersConfig>(json);
+
+        if (config is null) return new();
+
+        var builder = new FilterParametersBuilder();
+
+        if (!string.IsNullOrEmpty(config.LogFilePath))
+        {
+            builder.SetLogFilePath(config.LogFilePath);
+        }
+        if (!string.IsNullOrEmpty(config.OutputFilePath))
+        {
+            builder.SetOutputFilePath(config.OutputFilePath);
+        }
+        if (!string.IsNullOrEmpty(config.AddressStart))
+        {
+            builder.SetAddressStart(config.AddressStart);
+        }
+        if (config.AddressMask.HasValue)
+        {
+            builder.SetAddressMask(config.AddressMask.Value.ToString());
+        }
+        if (!string.IsNullOrEmpty(config.TimeStart))
+        {
+            builder.SetTimeStart(config.TimeStart);
+        }
+        if (!string.IsNullOrEmpty(config.TimeEnd))
+        {
+            builder.SetTimeEnd(config.TimeEnd);
+        }
+
+        return builder;
     }
 }

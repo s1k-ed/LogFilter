@@ -1,3 +1,4 @@
+using LogFilter.Exceptions;
 using LogFilter.Interfaces;
 
 namespace LogFilter.ArgumentParsers;
@@ -13,7 +14,7 @@ public sealed class ArgumentParser(string prefix, Action<string> handler) : IArg
         var parts = argument.Split('=');
 
         var value = parts.Length != 2 || string.IsNullOrWhiteSpace(parts[1])
-            ? throw new ArgumentException($"No value provided for the key {_prefix}")
+            ? throw new NoValueProvidedException(_prefix)
             : parts[1];
 
         _handler(value);

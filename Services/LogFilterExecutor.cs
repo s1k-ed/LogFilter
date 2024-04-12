@@ -15,12 +15,16 @@ public sealed class LogFilterExecutor
     {
         _reader = new(parameters.LogFilePath!);
         _writer = new(parameters.OutputFilePath!);
-        var filters = new List<IFilterStrategy>();
-        filters.Add(new TimeIntervalStrategy(parameters.TimeStart!.Value, parameters.TimeEnd!.Value));
+
+        var filters = new List<IFilterStrategy>
+        {
+            new TimeIntervalStrategy(parameters.TimeStart!.Value, parameters.TimeEnd!.Value)
+        };
         if (parameters.AddressStart is not null)
         {
             filters.Add(new IpAddressFilterStrategy(parameters.AddressStart, parameters.AddressMask));
         }
+
         _filterService = new(filters);
         _formatterService = new();
     }
